@@ -85,11 +85,11 @@
                     <p id="globalBalance" class="text-3xl font-extrabold mt-1 text-yellow-300 clickable-metric">0.00 UGX</p>
                 </div>
                 <div class="p-4 rounded-lg bg-white bg-opacity-10 shadow-inner">
-                    <p class="text-sm opacity-80">Total Credit (Income/Deposit)</p>
+                    <p class="text-sm opacity-80">Total Income (Income/Deposit)</p>
                     <p id="totalCredit" class="text-3xl font-extrabold mt-1 clickable-metric">0.00 UGX</p>
                 </div>
                 <div class="p-4 rounded-lg bg-white bg-opacity-10 shadow-inner">
-                    <p class="text-sm opacity-80">Total Debit (Expense/Withdrawal)</p>
+                    <p class="text-sm opacity-80">Total Expenses (Expense/Withdrawal)</p>
                     <p id="totalDebit" class="text-3xl font-extrabold mt-1 clickable-metric">0.00 UGX</p>
                 </div>
             </div>
@@ -105,13 +105,13 @@
         </div>
 
         <div class="card">
-            <h2>Add New Account</h2>
+            <h2>Add New Particulars</h2>
             <form id="accountForm">
                 <label for="name">Name</label>
                 <input id="name" required />
-                <label for="phone">Phone</label>
+                <label for="phone">Number/Code/ID</label>
                 <input id="phone" type="tel" />
-                <button type="submit">Save Account</button>
+                <button type="submit">Save Details</button>
                 <button type="button" class="secondary" onclick="clearForm()">Clear Form</button>
             </form>
         </div>
@@ -760,3 +760,4 @@
 </script>
 </body>
 </html>
+
