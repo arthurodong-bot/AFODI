@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AFODI FINANCIAL LANDSCAPE — Conquer your Financial Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body{font-family:'Inter',system-ui,sans-serif;background:#f5f7fa;color:#111;margin:0;min-height:100vh;}
+        .container{max-width:1000px;margin:auto;padding:20px;}
+        .card{background:white;padding:24px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.1);margin-bottom:20px;}
+        .dashboard-card{background:linear-gradient(135deg,#0ea5e9 0%,#1d4ed8 100%);color:white;}
+        table{width:100%;border-collapse:collapse;margin-top:16px;}
+        th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px;}
+        button{background:#0ea5a4;color:white;border:0;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;}
+        button:hover{background:#0d9488;}
+        button.secondary{background:#e0fafa;color:#065f5b;}
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:100;padding:20px;}
+        .modal-content{background:white;width:90%;max-width:800px;padding:24px;border-radius:12px;max-height:90vh;overflow-y:auto;}
+        input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;}
+        label{font-size:14px;font-weight:500;color:#374151;display:block;}
+        .transaction-table th,.transaction-table td{padding:8px;font-size:13px;}
+        tr.invalid-entry{border:2px solid #ef4444 !important;background-color:#fef2f2;}
+        .clickable-metric{cursor:pointer;}
+        .history-icon{cursor:pointer;font-size:18px;margin-left:8px;vertical-align:middle;}
+        .month-block{margin-bottom:18px;border:1px solid #e6edf6;border-radius:8px;padding:12px;background:#fbfdff;}
+        .month-header{font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+        .month-total{font-weight:700;}
+    </style>
+</head>
+<body>
+<div id="appContainer"></div>
+
+<!-- Registration Template -->
+<template id="registerTemplate">
+    <div id="loginContainer" class="bg-gray-100">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+            <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Create New User</h1>
+            <form id="registerForm" class="space-y-4">
+                <div>
+                    <label class="text-sm">Choose Password</label>
+                    <input id="newPassword" type="password" required class="w-full border p-3 rounded" />
+                </div>
+                <button type="submit" class="w-full py-3 bg-green-600 text-white rounded">Register</button>
+                <p class="text-center mt-2 text-blue-700 underline cursor-pointer" onclick="showLogin()">Back to Login</p>
+            </form>
+        </div>
+    </div>
+</template>
+
+<!-- Login Template -->
+<template id="loginTemplate">
+    <div id="loginContainer" class="bg-gray-100">
+        <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl">
+            <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Secure Access</h1>
+            <p class="text-center text-sm text-gray-500 mb-6">Enter your password to access the Financial System.</p>
+            <div id="loginMessage" class="hidden text-red-600 mb-3"></div>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label>Password</label>
+                    <input id="password" type="password" required class="w-full border p-3 rounded">
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded">Access System</button>
+                <p class="text-center mt-2 text-blue-700 underline cursor-pointer" onclick="showRegister()">Create an account</p>
+            </form>
+        </div>
+    </div>
+</template>
+
+<!-- Ledger Template -->
+<template id="ledgerTemplate">
+    <div class="container">
+        <div class="card dashboard-card">
+            <h2 class="text-2xl font-bold mb-4">
+                AFODI FINANCIAL LANDSCAPE
+                <br><span class="text-sm italic opacity-80">"Conquer your Financial Records"</span>
+            </h2>
+            <div class="flex items-center justify-between mb-2">
+                <div></div>
+                <div title="General History (monthly)" id="generalHistoryIcon" class="history-icon">📅</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 rounded-lg bg-white bg-opacity-10 shadow-inner">
+                    <p class="text-sm opacity-80">Total System Balance</p>
+                    <p id="globalBalance" class="text-3xl font-extrabold mt-1 text-yellow-300 clickable-metric">0.00 UGX</p>
+                </div>
+                <div class="p-4 rounded-lg bg-white bg-opacity-10 shadow-inner">
+                    <p class="text-sm opacity-80">Total Credit (Income/Deposit)</p>
+                    <p id="totalCredit" class="text-3xl font-extrabold mt-1 clickable-metric">0.00 UGX</p>
+                </div>
+                <div class="p-4 rounded-lg bg-white bg-opacity-10 shadow-inner">
+                    <p class="text-sm opacity-80">Total Debit (Expense/Withdrawal)</p>
+                    <p id="totalDebit" class="text-3xl font-extrabold mt-1 clickable-metric">0.00 UGX</p>
+                </div>
+            </div>
+
+            <!-- Reset + Backup/Restore UI -->
+            <div class="mt-4 flex gap-3">
+                <button onclick="resetAllData()" class="bg-red-600 px-4 py-2 rounded text-white">🔄 Reset System (Fresh Start)</button>
+                <button onclick="exportBackup()" class="bg-blue-600 px-4 py-2 rounded text-white">📤 Export Backup</button>
+                <button onclick="triggerRestore()" class="bg-yellow-600 px-4 py-2 rounded text-white">📥 Restore Backup</button>
+                <!-- hidden file input used for restore -->
+                <input id="restoreFileInput" type="file" accept=".json,application/json" style="display:none" onchange="handleRestoreFile(event)" />
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Add New Account</h2>
+            <form id="accountForm">
+                <label for="name">Name</label>
+                <input id="name" required />
+                <label for="phone">Phone</label>
+                <input id="phone" type="tel" />
+                <button type="submit">Save Account</button>
+                <button type="button" class="secondary" onclick="clearForm()">Clear Form</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Accounts Ledger</h2>
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Name</th><th>Phone</th><th>Balance</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="accountsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Transaction Modal -->
+        <div id="transactionModal" class="modal">
+            <div class="modal-content max-w-sm">
+                <h3 id="tModalTitle">Add Transaction Entry</h3>
+                <p class="text-gray-600 mb-4">Account: <strong id="tName" class="text-lg text-gray-900"></strong></p>
+                <label for="entryType">Type</label>
+                <select id="entryType">
+                    <option value="credit">Credit (Deposit / Income)</option>
+                    <option value="debit">Debit (Withdrawal / Expense)</option>
+                </select>
+                <label for="entryAmount">Amount</label>
+                <input type="number" id="entryAmount" required min="0.01" step="0.01" />
+                <label for="entryDate">Date</label>
+                <input type="date" id="entryDate" required />
+                <label for="entryReason">Reason/Description</label>
+                <input type="text" id="entryReason" placeholder="e.g., Office Supplies, Monthly Salary" required />
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button id="tModalAddBtn" onclick="handleSaveEntry()">Add Entry</button>
+                    <button class="secondary" onclick="closeTransactionModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Modal -->
+        <div id="detailsModal" class="modal">
+            <div class="modal-content">
+                <h3 class="text-2xl font-bold mb-4">Account Details: <span id="dName"></span></h3>
+                <p class="text-gray-600 mb-4">Current Balance: <strong id="dBalance" class="text-lg"></strong></p>
+                <div id="editMessage" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 font-medium" role="alert">
+                    You are in **Edit Mode**. Click 'Save Changes' below to finalize your history updates.
+                </div>
+                <h4 class="text-xl font-semibold mt-6 mb-3 border-b pb-1">Transaction History (Most Recent First)</h4>
+                <div id="transactionsList" class="overflow-x-auto"></div>
+                <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                    <div id="readModeButtons">
+                        <button id="deleteBtn" class="delete-btn px-4 py-2">Permanently Delete Account</button>
+                        <button id="editHistoryBtn" class="px-4 py-2 ml-3 bg-blue-600 hover:bg-blue-700 text-white">✏️ Edit History</button>
+                    </div>
+                    <div id="saveCancelButtons" class="hidden flex items-center space-x-3">
+                        <button id="saveHistoryBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700">💾 Save Changes</button>
+                        <button id="cancelEditBtn" class="secondary px-4 py-2" onclick="openDetailsModal(editing)">Cancel Edit</button>
+                    </div>
+                    <button id="closeDetailsBtn" class="secondary px-4 py-2" onclick="closeDetailsModal()">Close Details</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="historyModal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="historyModalTitle" class="text-2xl font-bold">System History</h3>
+                    <button class="secondary" onclick="closeHistoryModal()">Close</button>
+                </div>
+                <div id="historyContent"></div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    // --- Configuration and State ---
+    const KEY = 'tka_accounts_final_v1';
+    const SECURE_PASSWORD = "pass123";
+    let isLoggedIn = false;
+    let editing = null;
+    let isHistoryEditMode = false;
+    const appContainer = document.getElementById('appContainer');
+
+    // --- Local Storage Abstraction ---
+    function load() {
+        try {
+            return JSON.parse(localStorage.getItem(KEY) || '[]');
+        } catch (e) {
+            console.error("Error parsing local storage data:", e);
+            return [];
+        }
+    }
+    function save(data) {
+        localStorage.setItem(KEY, JSON.stringify(data));
+    }
+
+    // --- Utility Functions ---
+    const formatCurrency = (amount) => Number(amount).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'UGX',
+        minimumFractionDigits: 2
+    });
+
+    // --- Authentication and View Switching ---
+    function renderView() {
+        if (isLoggedIn) {
+            const template = document.getElementById('ledgerTemplate');
+            appContainer.innerHTML = '';
+            appContainer.appendChild(template.content.cloneNode(true));
+            document.getElementById('accountForm').addEventListener('submit', handleAccountSave);
+            render();
+            document.getElementById('name').focus();
+            const genIcon = document.getElementById('generalHistoryIcon');
+            if (genIcon) genIcon.onclick = openGeneralHistory;
+        } else {
+            showLogin();
+        }
+    }
+
+    function showRegister() {
+        const t = document.getElementById("registerTemplate");
+        appContainer.innerHTML = "";
+        appContainer.appendChild(t.content.cloneNode(true));
+        document.getElementById("registerForm").onsubmit = e => {
+            e.preventDefault();
+            const pass = document.getElementById("newPassword").value;
+            localStorage.setItem("USER_PASSWORD", pass);
+            alert("User registered! You can now log in.");
+            showLogin();
+        };
+    }
+
+    function showLogin() {
+        const t = document.getElementById('loginTemplate');
+        appContainer.innerHTML = '';
+        appContainer.appendChild(t.content.cloneNode(true));
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        document.getElementById('password').focus();
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        const savedPass = localStorage.getItem("USER_PASSWORD") || SECURE_PASSWORD;
+        const passwordInput = document.getElementById('password').value;
+        const loginMessage = document.getElementById('loginMessage');
+        if (passwordInput === savedPass) {
+            loginMessage && loginMessage.classList.add('hidden');
+            isLoggedIn = true;
+            renderView();
+        } else {
+            if (loginMessage) {
+                loginMessage.textContent = 'Invalid password.';
+                loginMessage.classList.remove('hidden');
+            }
+        }
+    }
+
+    // --- Rendering and UI Logic (Main Ledger) ---
+    function render() {
+        const data = load();
+        const body = document.getElementById('accountsBody');
+        if (!body) return;
+        body.innerHTML = '';
+        let globalBalance = 0;
+        let totalCredit = 0;
+        let totalDebit = 0;
+        data.forEach(x => {
+            const accountBalance = x.entries.reduce((a, b) => {
+                const amount = Number(b.amount);
+                if (b.type === 'credit') { totalCredit += amount; return a + amount; }
+                else { totalDebit += amount; return a - amount; }
+            }, 0);
+            globalBalance += accountBalance;
+            const formattedBalance = formatCurrency(accountBalance);
+            const balanceClass = accountBalance < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
+            const row = `
+                <tr>
+                    <td>${data.indexOf(x) + 1}</td>
+                    <td>${x.name}</td>
+                    <td>${x.phone || 'N/A'}</td>
+                    <td class="${balanceClass}">${formattedBalance}</td>
+                    <td class="actions flex items-center">
+                        <span class="edit" onclick="openAddEntryModal('${x.id}')">✏️ Add Entry</span>
+                        <span class="edit view-link ml-4" onclick="openDetailsModal('${x.id}')">👁️ View Details</span>
+                    </td>
+                </tr>`;
+            body.innerHTML += row;
+        });
+        const globalBalanceEl = document.getElementById('globalBalance');
+        if (globalBalanceEl) {
+            globalBalanceEl.textContent = formatCurrency(globalBalance);
+            document.getElementById('totalCredit').textContent = formatCurrency(totalCredit);
+            document.getElementById('totalDebit').textContent = formatCurrency(totalDebit);
+            if (globalBalance < 0) {
+                globalBalanceEl.classList.add('text-red-300'); globalBalanceEl.classList.remove('text-yellow-300');
+            } else {
+                globalBalanceEl.classList.add('text-yellow-300'); globalBalanceEl.classList.remove('text-red-300');
+            }
+            globalBalanceEl.onclick = openSystemBalanceHistory;
+            const totalDebitEl = document.getElementById('totalDebit');
+            if (totalDebitEl) totalDebitEl.onclick = openTotalDebitHistory;
+            const totalCreditEl = document.getElementById('totalCredit');
+            if (totalCreditEl) totalCreditEl.onclick = openTotalCreditHistory;
+        }
+        if (data.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-4">No accounts recorded yet.</td></tr>';
+        }
+    }
+
+    // --- Account Management Functions ---
+    function handleAccountSave(e) {
+        e.preventDefault();
+        const data = load();
+        const nameInput = document.getElementById('name');
+        const phoneInput = document.getElementById('phone');
+        const newAccount = {
+            id: 'A' + Date.now() + Math.floor(Math.random() * 1000),
+            name: nameInput.value.trim(),
+            phone: phoneInput.value.trim(),
+            entries: []
+        };
+        data.push(newAccount);
+        save(data);
+        render();
+        clearForm();
+        nameInput.focus();
+    }
+
+    function clearForm() {
+        const form = document.getElementById('accountForm'); if (form) form.reset();
+        const nameInput = document.getElementById('name'); if (nameInput) nameInput.focus();
+    }
+
+    function deleteAccount() {
+        const data = load().find(x => x.id === editing);
+        if (!data) return;
+        const confirmation = prompt(`Type "DELETE" to permanently remove account: ${data.name}. This action cannot be undone.`);
+        if (confirmation === 'DELETE') {
+            let allData = load();
+            allData = allData.filter(x => x.id !== editing);
+            save(allData);
+            render();
+            closeDetailsModal();
+        }
+    }
+
+    // --- Transaction Modal Logic ---
+    function openAddEntryModal(id) {
+        editing = id;
+        const data = load().find(x => x.id === id);
+        if (!data) return;
+        document.getElementById('entryAmount').value = '';
+        document.getElementById('entryType').value = 'credit';
+        document.getElementById('entryReason').value = '';
+        document.getElementById('entryDate').valueAsDate = new Date();
+        document.getElementById('tModalTitle').textContent = 'Add Transaction Entry';
+        document.getElementById('tModalAddBtn').textContent = 'Add Entry';
+        document.getElementById('tName').innerText = data.name;
+        document.getElementById('transactionModal').style.display = 'flex';
+        document.getElementById('entryAmount').focus();
+    }
+
+    function closeTransactionModal() { document.getElementById('transactionModal').style.display = 'none'; }
+
+    function handleSaveEntry() {
+        const type = document.getElementById('entryType').value;
+        const amount = Number(document.getElementById('entryAmount').value);
+        const date = document.getElementById('entryDate').value;
+        const reason = document.getElementById('entryReason').value.trim();
+        if (amount <= 0 || isNaN(amount) || !date || !reason) { console.error('Validation Error'); return; }
+        let data = load();
+        const accountIdx = data.findIndex(x => x.id === editing);
+        if (accountIdx === -1) { console.error('Account not found during save.'); closeTransactionModal(); return; }
+        data[accountIdx].entries.push({ type, amount, date, reason, timestamp: new Date().toISOString() });
+        save(data);
+        render();
+        closeTransactionModal();
+    }
+
+    // --- Details Modal Logic ---
+    function openDetailsModal(id) {
+        editing = id; isHistoryEditMode = false;
+        const account = load().find(x => x.id === id); if (!account) return;
+        const currentBalance = account.entries.reduce((a,b) => a + (b.type === 'credit' ? Number(b.amount) : -Number(b.amount)), 0);
+        const formattedBalance = formatCurrency(currentBalance);
+        document.getElementById('dName').textContent = account.name;
+        document.getElementById('dBalance').textContent = formattedBalance;
+        document.getElementById('dBalance').className = currentBalance < 0 ? 'text-lg text-red-600 font-bold' : 'text-lg text-green-600 font-bold';
+        renderTransactionTable(account);
+        const deleteBtn = document.getElementById('deleteBtn'); const editHistoryBtn = document.getElementById('editHistoryBtn');
+        if (deleteBtn && editHistoryBtn) { deleteBtn.onclick = deleteAccount; editHistoryBtn.onclick = toggleHistoryEditMode; document.getElementById('saveHistoryBtn').onclick = saveHistoryChanges; }
+        document.getElementById('readModeButtons').classList.remove('hidden');
+        document.getElementById('saveCancelButtons').classList.add('hidden');
+        document.getElementById('editMessage').classList.add('hidden');
+        document.getElementById('closeDetailsBtn').style.display = 'inline-block';
+        document.getElementById('detailsModal').style.display = 'flex';
+    }
+
+    function closeDetailsModal() { document.getElementById('detailsModal').style.display = 'none'; isHistoryEditMode = false; editing = null; }
+
+    function renderTransactionTable(account) {
+        const transactionsList = document.getElementById('transactionsList');
+        transactionsList.innerHTML = '';
+        if (account.entries.length === 0) { transactionsList.innerHTML = '<p class="text-gray-500 py-4 text-center">No transactions recorded for this account.</p>'; return; }
+        const sortedEntries = account.entries.slice().sort((a,b) => {
+            const dateA = new Date(a.date); const dateB = new Date(b.date);
+            if (dateA.getTime() !== dateB.getTime()) return dateB.getTime() - dateA.getTime();
+            if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp);
+            return 0;
+        });
+        const transactionRows = sortedEntries.map((entry, index) => {
+            const typeClass = entry.type === 'credit' ? 'text-green-600' : 'text-red-600';
+            const sign = entry.type === 'credit' ? '+' : '-';
+            const displayAmount = sign + formatCurrency(Number(entry.amount)).replace(sign, '');
+            return `
+                <tr data-timestamp="${entry.timestamp}" class="transaction-row">
+                    <td>${index + 1}</td>
+                    <td data-field="date"><span class="read-mode ${isHistoryEditMode ? 'hidden' : ''}">${entry.date}</span><input type="date" value="${entry.date}" class="edit-mode ${isHistoryEditMode ? '' : 'hidden'} w-full p-1 border rounded" /></td>
+                    <td data-field="reason"><span class="read-mode ${isHistoryEditMode ? 'hidden' : ''}">${entry.reason || 'N/A'}</span><input type="text" value="${entry.reason}" class="edit-mode ${isHistoryEditMode ? '' : 'hidden'} w-full p-1 border rounded" /></td>
+                    <td data-field="type"><span class="read-mode ${isHistoryEditMode ? 'hidden' : ''} ${typeClass}">${entry.type.toUpperCase()}</span><select class="edit-mode ${isHistoryEditMode ? '' : 'hidden'} w-full p-1 border rounded"><option value="credit" ${entry.type === 'credit' ? 'selected' : ''}>Credit</option><option value="debit" ${entry.type === 'debit' ? 'selected' : ''}>Debit</option></select></td>
+                    <td data-field="amount" class="text-right"><span class="read-mode ${isHistoryEditMode ? 'hidden' : ''} ${typeClass} font-semibold">${displayAmount}</span><input type="number" value="${Number(entry.amount)}" min="0.01" step="0.01" class="edit-mode ${isHistoryEditMode ? '' : 'hidden'} w-full p-1 border rounded text-right ${typeClass}" /></td>
+                    <td class="action-cell w-[20%]"><span class="delete-transaction-btn edit-mode ${isHistoryEditMode ? '' : 'hidden'} text-red-600 cursor-pointer hover:underline" onclick="deleteTransaction('${account.id}', '${entry.timestamp}')">❌ Delete</span></td>
+                </tr>
+            `;
+        }).join('');
+        transactionsList.innerHTML = `
+            <table id="historyTable" class="transaction-table w-full">
+                <thead><tr><th class="w-[5%]">#</th><th class="w-[15%]">Date</th><th class="w-[35%]">Reason</th><th class="w-[10%]">Type</th><th class="w-[15%] text-right">Amount (UGX)</th><th class="w-[20%]">Actions</th></tr></thead>
+                <tbody>${transactionRows}</tbody>
+            </table>
+        `;
+    }
+
+    function toggleHistoryEditMode() {
+        isHistoryEditMode = !isHistoryEditMode;
+        const table = document.getElementById('historyTable');
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const readModes = row.querySelectorAll('.read-mode');
+                const editModes = row.querySelectorAll('.edit-mode');
+                readModes.forEach(el => el.classList.toggle('hidden', isHistoryEditMode));
+                editModes.forEach(el => el.classList.toggle('hidden', !isHistoryEditMode));
+                row.classList.remove('invalid-entry');
+            });
+        }
+        document.getElementById('readModeButtons').classList.toggle('hidden');
+        document.getElementById('saveCancelButtons').classList.toggle('hidden');
+        document.getElementById('closeDetailsBtn').style.display = isHistoryEditMode ? 'none' : 'inline-block';
+        document.getElementById('editMessage').classList.toggle('hidden', !isHistoryEditMode);
+    }
+
+    function deleteTransaction(accountId, timestamp) {
+        let allData = load();
+        const accountIdx = allData.findIndex(x => x.id === accountId);
+        if (accountIdx === -1) { console.error("Account not found for transaction deletion."); return; }
+        const confirmation = prompt("To confirm deletion of this single transaction, type 'DELETE'.");
+        if (confirmation === 'DELETE') {
+            allData[accountIdx].entries = allData[accountIdx].entries.filter(e => e.timestamp !== timestamp);
+            save(allData);
+            openDetailsModal(editing);
+            if (!isHistoryEditMode) { isHistoryEditMode = true; }
+            toggleHistoryEditMode();
+            render();
+        }
+    }
+
+    function saveHistoryChanges() {
+        let allData = load();
+        const accountIdx = allData.findIndex(x => x.id === editing);
+        if (accountIdx === -1) { console.error("Account not found during history save."); closeDetailsModal(); return; }
+        const account = allData[accountIdx];
+        const newEntries = [];
+        const table = document.getElementById('historyTable');
+        let isValid = true;
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const timestamp = row.getAttribute('data-timestamp');
+                const reasonInput = row.querySelector('[data-field="reason"] input');
+                const dateInput = row.querySelector('[data-field="date"] input');
+                const amountInput = row.querySelector('[data-field="amount"] input');
+                const typeSelect = row.querySelector('[data-field="type"] select');
+                const newReason = reasonInput.value.trim();
+                const newDate = dateInput.value;
+                const newAmount = Number(amountInput.value);
+                const newType = typeSelect.value;
+                row.classList.remove('invalid-entry');
+                if (!newReason || !newDate || isNaN(newAmount) || newAmount <= 0) {
+                    isValid = false;
+                    row.classList.add('invalid-entry');
+                    return;
+                }
+                newEntries.push({ timestamp: timestamp, reason: newReason, date: newDate, amount: newAmount, type: newType });
+            });
+            if (!isValid) {
+                document.getElementById('editMessage').innerHTML = '<strong>⚠️ Correction Needed:</strong> Please correct the highlighted entries before saving.';
+                document.getElementById('editMessage').classList.remove('bg-yellow-100', 'border-yellow-500', 'text-yellow-700');
+                document.getElementById('editMessage').classList.add('bg-red-100', 'border-red-500', 'text-red-700');
+                return;
+            }
+            account.entries = newEntries;
+            allData[accountIdx] = account;
+            save(allData);
+            render();
+            isHistoryEditMode = false;
+            openDetailsModal(editing);
+        }
+    }
+
+    // --- History grouping & rendering ---
+    function groupEntriesByMonth(entries) {
+        const map = {};
+        entries.forEach(e => {
+            const d = new Date(e.date);
+            if (isNaN(d.getTime())) return;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const key = `${year}-${month}`;
+            if (!map[key]) map[key] = [];
+            map[key].push(e);
+        });
+        return Object.keys(map).sort((a,b) => b.localeCompare(a)).map(key => {
+            const [year, month] = key.split('-');
+            const entries = map[key].sort((a,b) => {
+                const da = new Date(a.date).getTime();
+                const db = new Date(b.date).getTime();
+                if (da !== db) return db - da;
+                if (a.timestamp && b.timestamp) return new Date(b.timestamp) - new Date(a.timestamp);
+                return 0;
+            });
+            const monthLabel = new Date(`${year}-${month}-01`).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            const total = entries.reduce((s,it) => s + Number(it.amount) * (it.type === 'debit' ? -1 : 1) , 0);
+            return { key, monthLabel, entries, total };
+        });
+    }
+
+    function renderHistoryModal(entries, title) {
+        const grouped = groupEntriesByMonth(entries);
+        const content = document.getElementById('historyContent');
+        if (!content) return;
+        if (grouped.length === 0) { content.innerHTML = '<p class="text-gray-600">No transactions to display.</p>'; openHistoryModalWithTitle(title); return; }
+        let html = '';
+        grouped.forEach(g => {
+            const monthTotalDisplay = formatCurrency(Math.abs(g.total)) + (g.total < 0 ? ' (Net Debit)' : ' (Net Credit)');
+            html += `<div class="month-block">
+                        <div class="month-header">
+                            <div>${g.monthLabel}</div>
+                            <div class="month-total">${monthTotalDisplay}</div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="w-[5%]">#</th>
+                                        <th class="w-[18%]">Date</th>
+                                        <th class="w-[22%]">Account</th>
+                                        <th class="w-[30%]">Reason</th>
+                                        <th class="w-[10%]">Type</th>
+                                        <th class="w-[15%] text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+            g.entries.forEach((e, idx) => {
+                const sign = e.type === 'credit' ? '+' : '-';
+                const amountDisplay = sign + formatCurrency(Number(e.amount)).replace(sign, '');
+                html += `<tr>
+                            <td>${idx + 1}</td>
+                            <td>${e.date}</td>
+                            <td>${e.accountName}</td>
+                            <td>${e.reason || 'N/A'}</td>
+                            <td>${e.type.toUpperCase()}</td>
+                            <td class="text-right">${amountDisplay}</td>
+                        </tr>`;
+            });
+            html += `       </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+        });
+        content.innerHTML = html;
+        openHistoryModalWithTitle(title);
+    }
+
+    function openHistoryModalWithTitle(title) {
+        const titleEl = document.getElementById('historyModalTitle');
+        const modal = document.getElementById('historyModal');
+        const content = document.getElementById('historyContent');
+        if (!modal || !content || !titleEl) return;
+        titleEl.textContent = title;
+        modal.style.display = 'flex';
+    }
+    function closeHistoryModal() { const m = document.getElementById('historyModal'); if (m) m.style.display = 'none'; }
+
+    function openSystemBalanceHistory() {
+        const data = load();
+        const allEntries = [];
+        data.forEach(acc => { (acc.entries || []).forEach(entry => { allEntries.push({ accountName: acc.name, date: entry.date, reason: entry.reason, amount: entry.amount, type: entry.type, timestamp: entry.timestamp }); }); });
+        renderHistoryModal(allEntries, 'System Transactions by Month (All Types)');
+    }
+
+    function openTotalDebitHistory() {
+        const data = load(); const debitEntries = [];
+        data.forEach(acc => { (acc.entries || []).forEach(entry => { if (entry.type === 'debit') debitEntries.push({ accountName: acc.name, date: entry.date, reason: entry.reason, amount: entry.amount, type: entry.type, timestamp: entry.timestamp }); }); });
+        renderHistoryModal(debitEntries, 'Monthly Debit Transactions (All Clients)');
+    }
+
+    function openTotalCreditHistory() {
+        const data = load(); const creditEntries = [];
+        data.forEach(acc => { (acc.entries || []).forEach(entry => { if (entry.type === 'credit') creditEntries.push({ accountName: acc.name, date: entry.date, reason: entry.reason, amount: entry.amount, type: entry.type, timestamp: entry.timestamp }); }); });
+        renderHistoryModal(creditEntries, 'Monthly Credit Transactions (All Clients)');
+    }
+
+    function openGeneralHistory() { openSystemBalanceHistory(); }
+
+    // --- Reset (hard confirm) ---
+    function resetAllData() {
+        const confirmText = prompt(
+            "⚠️ WARNING: This will erase ALL accounts and ALL transactions.\n\n" +
+            "To continue, type exactly:\n\nREFRESH AND CLEAR DATA"
+        );
+        if (confirmText === "REFRESH AND CLEAR DATA") {
+            localStorage.removeItem(KEY);
+            localStorage.removeItem("USER_PASSWORD");
+            alert("System has been refreshed. It is now brand new.");
+            location.reload();
+        } else {
+            alert("Action cancelled. Nothing was deleted.");
+        }
+    }
+
+    // --- NEW: Backup (Export) & Restore (Import) ---
+    // Export: creates a JSON file with { data: <accounts>, userPassword: <pwd|null>, metadata: {...} }
+    function exportBackup() {
+        try {
+            const payload = {
+                metadata: {
+                    exportedAt: new Date().toISOString(),
+                    app: "AFODI FINANCIAL LANDSCAPE"
+                },
+                userPassword: localStorage.getItem("USER_PASSWORD") || null,
+                data: load()
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+            const fileName = `afodi_backup_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            alert("Backup exported. Save the downloaded .json file in a safe place.");
+        } catch (err) {
+            console.error("Export failed:", err);
+            alert("Export failed. See console for details.");
+        }
+    }
+
+    // Trigger file input for restore
+    function triggerRestore() {
+        const input = document.getElementById('restoreFileInput');
+        if (input) {
+            input.value = ''; // reset selection
+            input.click();
+        }
+    }
+
+    // Handle the file selected for restore
+    function handleRestoreFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const text = e.target.result;
+                let parsed = JSON.parse(text);
+
+                // Accept either { data: [...], userPassword: '', metadata: {...} } OR raw array of accounts
+                if (Array.isArray(parsed)) {
+                    // older style: direct array of accounts
+                    parsed = { data: parsed, userPassword: null, metadata: null };
+                }
+
+                // Basic validation
+                if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.data)) {
+                    alert("Invalid backup file format. Expected exported JSON with 'data' array.");
+                    return;
+                }
+
+                // Ask for confirmation phrase to make restore hard by mistake
+                const confirmText = prompt(
+                    "⚠️ You are about to replace current system data with the contents of the selected backup file.\n\n" +
+                    "To confirm, type exactly:\n\nRESTORE AND LOAD DATA"
+                );
+                if (confirmText !== "RESTORE AND LOAD DATA") {
+                    alert("Restore cancelled. Confirmation phrase did not match exactly.");
+                    return;
+                }
+
+                // All good — perform restore
+                save(parsed.data);
+                if (parsed.userPassword !== undefined && parsed.userPassword !== null) {
+                    localStorage.setItem("USER_PASSWORD", parsed.userPassword);
+                } else {
+                    // if no password in backup, clear existing password to avoid lockout (optional)
+                    localStorage.removeItem("USER_PASSWORD");
+                }
+
+                alert("Restore complete. Reloading application to apply restored data.");
+                location.reload();
+            } catch (err) {
+                console.error("Restore failed:", err);
+                alert("Failed to restore backup. See console for details.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- Make functions globally accessible ---
+    window.clearForm = clearForm;
+    window.openAddEntryModal = openAddEntryModal;
+    window.closeTransactionModal = closeTransactionModal;
+    window.handleSaveEntry = handleSaveEntry;
+    window.openDetailsModal = openDetailsModal;
+    window.closeDetailsModal = closeDetailsModal;
+    window.deleteAccount = deleteAccount;
+    window.toggleHistoryEditMode = toggleHistoryEditMode;
+    window.saveHistoryChanges = saveHistoryChanges;
+    window.deleteTransaction = deleteTransaction;
+    window.resetAllData = resetAllData;
+    window.exportBackup = exportBackup;
+    window.triggerRestore = triggerRestore;
+    window.handleRestoreFile = handleRestoreFile;
+    window.openSystemBalanceHistory = openSystemBalanceHistory;
+    window.openTotalDebitHistory = openTotalDebitHistory;
+    window.openTotalCreditHistory = openTotalCreditHistory;
+    window.openGeneralHistory = openGeneralHistory;
+    window.closeHistoryModal = closeHistoryModal;
+    window.showRegister = showRegister;
+    window.showLogin = showLogin;
+
+    // --- Initialization ---
+    window.onload = renderView;
+</script>
+</body>
+</html>
